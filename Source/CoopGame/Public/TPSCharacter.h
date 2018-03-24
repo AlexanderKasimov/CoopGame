@@ -6,6 +6,9 @@
 #include "GameFramework/Character.h"
 #include "TPSCharacter.generated.h"
 
+class UCameraComponent;
+class USpringArmComponent;
+
 UCLASS()
 class COOPGAME_API ATPSCharacter : public ACharacter
 {
@@ -23,6 +26,30 @@ protected:
 
 	void MoveRight(float Value);
 
+	void BeginCrouch();
+
+	void EndCrouch();
+	
+	void BeginZoom();
+
+	void EndZoom();
+		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UCameraComponent* CameraComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USpringArmComponent* SpringArmComponent;	
+
+	bool bWantsToZoom;
+
+	//Set at begin play
+	float DefaultFOV;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player")
+	float ZoomedFOV;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player", meta = (ClampMin=0.1, ClampMax=100))
+	float ZoomInterpSpeed;
 
 public:	
 	// Called every frame
@@ -31,6 +58,6 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	
+	virtual FVector GetPawnViewLocation() const override;
 	
 };
