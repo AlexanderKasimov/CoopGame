@@ -4,6 +4,12 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "TPSBaseWeapon.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "TPSHealthComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Net/UnrealNetwork.h"
+
 
 // Sets default values
 ATPSCharacter::ATPSCharacter()
@@ -20,9 +26,13 @@ ATPSCharacter::ATPSCharacter()
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
 	CameraComponent->SetupAttachment(SpringArmComponent);
+
+	HealthComponent = CreateDefaultSubobject<UTPSHealthComponent>(TEXT("HealthComponent"));
 	
 	ZoomedFOV = 65.0f;
 	ZoomInterpSpeed = 20;
+
+	WeaponAttachementSocketName = "WeaponSocket";
 
 }
 
@@ -32,8 +42,41 @@ void ATPSCharacter::BeginPlay()
 	Super::BeginPlay();
 	
 	DefaultFOV = CameraComponent->FieldOfView;
+	HealthComponent->OnHealthChanged.AddDynamic(this, &ATPSCharacter::OnHealthChanged);
+
+	if (Role == ROLE_Authority)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		CurrentWeapon = GetWorld()->SpawnActor<ATPSBaseWeapon>(StarterWeaponClass, SpawnParams);
+
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->SetOwner(this);
+			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachementSocketName);
+		}
+	}
+
 }
 
+void ATPSCharacter::OnHealthChanged(UTPSHealthComponent * HealthComp, float Health, float HealthDelta, const UDamageType * DamageType, AController * InstigatedBy, AActor * DamageCauser)
+{
+	if (Health <= 0.0f && !bDead)
+	{
+		bDead = true;
+		GetMovementComponent()->StopMovementImmediately();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		DetachFromControllerPendingDestroy();
+		SetLifeSpan(10.0f);
+		if (Role == ROLE_Authority)
+		{
+			RestartLevel();
+		}
+	}
+
+}
 
 void ATPSCharacter::MoveForward(float Value)
 {
@@ -58,14 +101,33 @@ void ATPSCharacter::EndCrouch()
 	UnCrouch();
 }
 
+
 void ATPSCharacter::BeginZoom()
 {
 	bWantsToZoom = true;
 }
 
+
 void ATPSCharacter::EndZoom()
 {
 	bWantsToZoom = false;
+}
+
+
+void ATPSCharacter::StartFire()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StartFire();
+	}
+}
+
+void ATPSCharacter::StopFire()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StopFire();
+	}
 }
 
 
@@ -80,8 +142,6 @@ void ATPSCharacter::Tick(float DeltaTime)
 	float NewFOV = FMath::FInterpTo(CameraComponent->FieldOfView, TargetFOV, DeltaTime, ZoomInterpSpeed);
 	CameraComponent->SetFieldOfView(NewFOV);
 }
-
-
 
 // Called to bind functionality to input
 void ATPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -102,8 +162,10 @@ void ATPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &ATPSCharacter::BeginZoom);
 	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &ATPSCharacter::EndZoom);
 
-
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ATPSCharacter::StartFire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ATPSCharacter::StopFire);
 }
+
 
 FVector ATPSCharacter::GetPawnViewLocation() const
 {
@@ -113,4 +175,14 @@ FVector ATPSCharacter::GetPawnViewLocation() const
 	}	
 	return Super::GetPawnViewLocation();
 }
+
+void ATPSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ATPSCharacter, CurrentWeapon);
+	DOREPLIFETIME(ATPSCharacter, bDead);
+}
+
+
 

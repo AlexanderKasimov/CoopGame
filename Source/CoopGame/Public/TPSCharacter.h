@@ -8,6 +8,9 @@
 
 class UCameraComponent;
 class USpringArmComponent;
+class ATPSBaseWeapon;
+class UTPSHealthComponent;
+
 
 UCLASS()
 class COOPGAME_API ATPSCharacter : public ACharacter
@@ -33,12 +36,34 @@ protected:
 	void BeginZoom();
 
 	void EndZoom();
+
+	void StartFire();
+
+	void StopFire();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<ATPSBaseWeapon> StarterWeaponClass;
+	
+	UPROPERTY(Replicated)
+	ATPSBaseWeapon* CurrentWeapon;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Weapon")
+	FName WeaponAttachementSocketName;
 		
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UCameraComponent* CameraComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USpringArmComponent* SpringArmComponent;	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UTPSHealthComponent* HealthComponent;
+
+	UPROPERTY(Replicated,BlueprintReadOnly, Category = "Player")
+	bool bDead;
+
+	UFUNCTION()
+	void OnHealthChanged(UTPSHealthComponent* HealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 
 	bool bWantsToZoom;
 
@@ -50,6 +75,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player", meta = (ClampMin=0.1, ClampMax=100))
 	float ZoomInterpSpeed;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void RestartLevel();
+
 
 public:	
 	// Called every frame
