@@ -40,6 +40,13 @@ void UTPSHealthComponent::BeginPlay()
 }
 
 
+void UTPSHealthComponent::OnRep_Health(float OldHealth)
+{
+	float Damage = OldHealth - Health;
+	OnHealthChanged.Broadcast(this, Health, Damage, nullptr, nullptr, nullptr);
+}
+
+
 void UTPSHealthComponent::HandleTakeAnyDamage(AActor * DamagedActor, float Damage, const UDamageType * DamageType, AController * InstigatedBy, AActor * DamageCauser)
 {
 	if (Damage <= 0.0f)
