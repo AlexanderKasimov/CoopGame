@@ -23,7 +23,10 @@ ATPSPickupActor::ATPSPickupActor()
 	DecalComponent->DecalSize = FVector(65, 75, 75);
 	DecalComponent->SetupAttachment(RootComponent);
 
-	CooldownRate = 5.0f;
+	CooldownRate = 10.0f;
+
+	SetReplicates(true);
+
 }
 
 // Called when the game starts or when spawned
@@ -31,7 +34,10 @@ void ATPSPickupActor::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	Respawn();
+	if (Role == ROLE_Authority)
+	{
+		Respawn();
+	}
 }
 
 
@@ -66,9 +72,9 @@ void ATPSPickupActor::NotifyActorBeginOverlap(AActor * OtherActor)
 		return;
 	}
 
-	if (PowerUpInstance)
+	if (PowerUpInstance && Role == ROLE_Authority)
 	{
-		PowerUpInstance->ActivatePowerUp();
+		PowerUpInstance->ActivatePowerUp(OtherActor);
 		PowerUpInstance = nullptr;
 
 		GetWorldTimerManager().SetTimer(TimerHandle_RespawnTimer, this, &ATPSPickupActor::Respawn, CooldownRate);

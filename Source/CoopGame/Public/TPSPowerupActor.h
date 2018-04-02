@@ -29,12 +29,21 @@ protected:
 
 	FTimerHandle TimerHandle_PowerupTicks;
 
+	UPROPERTY(ReplicatedUsing=OnRep_PowerupActive)
+	bool bIsPowerupActive;
+
+	UFUNCTION()
+	void OnRep_PowerupActive();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
-	void OnActivated();
+	void OnPowerupStateChanged(bool bNewPowerupState);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
+	void OnActivated(AActor* OverlappedActor);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
 	void OnExpired();
@@ -45,7 +54,7 @@ public:
 	UFUNCTION()
 	void OnTickPowerup();
 
-	void ActivatePowerUp();
+	void ActivatePowerUp(AActor* OverlappedActor);
 
 	
 	
