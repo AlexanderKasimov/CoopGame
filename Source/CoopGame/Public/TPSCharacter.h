@@ -37,10 +37,6 @@ protected:
 
 	void EndZoom();
 
-	void StartFire();
-
-	void StopFire();
-
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<ATPSBaseWeapon> StarterWeaponClass;
 	
@@ -79,6 +75,9 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void RestartLevel();
 
+	UFUNCTION(BlueprintCallable)
+	void SpawnWeapon(TSubclassOf<ATPSBaseWeapon> WeaponClass);
+
 
 public:	
 	// Called every frame
@@ -88,5 +87,12 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual FVector GetPawnViewLocation() const override;
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
+		void StartFire();
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
+		void StopFire();
+
 	
 };

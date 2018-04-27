@@ -15,6 +15,9 @@
 #include "Sound/SoundCue.h"
 
 
+static int32 DebugTrackerBotDrawing = 0;
+
+FAutoConsoleVariableRef CVARDebugTrackerBotDrawing(TEXT("COOP.DebugTrackerBot"), DebugTrackerBotDrawing, TEXT("Draw Debug Lines for TrackerBot"), ECVF_Cheat);
 
 
 // Sets default values
@@ -41,8 +44,8 @@ ATPSTrackerBot::ATPSTrackerBot()
 	bUseVelocityChange = true;
 	RequiredDistanceToTarget = 100;
 	
-	ExplosionDamage = 50;
-	ExplosionRadius = 200;
+	ExplosionDamage = 60;
+	ExplosionRadius = 350;
 	SelfDamageInterval = 0.25f;
 
 	SphereComponent->SetSphereRadius(ExplosionRadius);
@@ -77,24 +80,54 @@ void ATPSTrackerBot::HandleTakeDamage(UTPSHealthComponent * HealthComp, float He
 		SelfDestruct();
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Health %s of %s //HealthDelta = %s"), *FString::SanitizeFloat(Health), *GetName(), *FString::SanitizeFloat(HealthDelta));
+	//UE_LOG(LogTemp, Log, TEXT("Health %s of %s //HealthDelta = %s"), *FString::SanitizeFloat(Health), *GetName(), *FString::SanitizeFloat(HealthDelta));
 
 }
 
 
 FVector ATPSTrackerBot::GetNextPathPoint()
 {
-	ACharacter* PlayerPawn = UGameplayStatics::GetPlayerCharacter(this, 0);
-	
-	UNavigationPath* NavPath = UNavigationSystem::FindPathToActorSynchronously(this, GetActorLocation(), PlayerPawn);
 
-	if (NavPath) 
+	AActor* BestTarget = nullptr;
+	float NearestTargetDistance = MAX_FLT;
+
+	for (FConstPawnIterator It = GetWorld()->GetPawnIterator(); It; ++It)
 	{
-		if (NavPath->PathPoints.Num() > 1)
+		APawn* TestPawn = It->Get();
+		if (TestPawn == nullptr || UTPSHealthComponent::IsFriendly(TestPawn, this))
 		{
-			return NavPath->PathPoints[1];
+			continue;
+		}
+		UTPSHealthComponent* TestHealthComponent = Cast<UTPSHealthComponent>(TestPawn->GetComponentByClass(UTPSHealthComponent::StaticClass()));
+
+		if (TestHealthComponent && TestHealthComponent->GetHealth() > 0.0f)
+		{
+			float DistanceToTestPawn = (TestPawn->GetActorLocation() - GetActorLocation()).Size();
+			if (DistanceToTestPawn < NearestTargetDistance)
+			{
+				BestTarget = TestPawn;
+				NearestTargetDistance = DistanceToTestPawn;
+			}		
 		}
 	}
+	
+	if (BestTarget)
+	{
+		UNavigationPath* NavPath = UNavigationSystem::FindPathToActorSynchronously(this, GetActorLocation(), BestTarget);
+
+		GetWorldTimerManager().ClearTimer(TimerHandle_RefreshPath);
+		GetWorldTimerManager().SetTimer(TimerHandle_RefreshPath, this, &ATPSTrackerBot::RefreshPath, 5.0f, false);
+
+		if (NavPath)
+		{
+			if (NavPath->PathPoints.Num() > 1)
+			{
+				return NavPath->PathPoints[1];
+			}
+		}
+	}
+
+
 
 	return GetActorLocation();
 }
@@ -123,7 +156,11 @@ void ATPSTrackerBot::SelfDestruct()
 
 		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
 
-		DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f, 0, 1.0f);
+		if (DebugTrackerBotDrawing)
+		{
+			DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f, 0, 1.0f);
+		}
+		
 
 		SetLifeSpan(2.0f);
 	}
@@ -138,7 +175,8 @@ void ATPSTrackerBot::NotifyActorBeginOverlap(AActor * OtherActor)
 	if (!bStartedSelfDestruct && !bExploded)
 	{
 		ATPSCharacter* PlayerPawn = Cast<ATPSCharacter>(OtherActor);
-		if (PlayerPawn) 		
+
+		if (PlayerPawn && !UTPSHealthComponent::IsFriendly(OtherActor, this))
 		{
 			// Possible errors but non critical
 			bStartedSelfDestruct = true;
@@ -154,6 +192,11 @@ void ATPSTrackerBot::NotifyActorBeginOverlap(AActor * OtherActor)
 
 }
 
+
+void ATPSTrackerBot::RefreshPath()
+{
+	NextPathPoint = GetNextPathPoint();
+}
 
 void ATPSTrackerBot::DamageSelf()
 {
@@ -183,10 +226,17 @@ void ATPSTrackerBot::Tick(float DeltaTime)
 
 			MeshComponent->AddForce(ForceDirection, NAME_None, bUseVelocityChange);
 
-			DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + ForceDirection, 32, FColor::Yellow, false, 0.0f, 0, 1.0f);
-		}
+			if (DebugTrackerBotDrawing)
+			{
+				DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + ForceDirection, 32, FColor::Yellow, false, 0.0f, 0, 1.0f);
+			}
 
-		DrawDebugSphere(GetWorld(), NextPathPoint, 20, 12, FColor::Yellow, false, 0.0f, 0, 2.0f);
+		}
+		if (DebugTrackerBotDrawing)
+		{
+			DrawDebugSphere(GetWorld(), NextPathPoint, 20, 12, FColor::Yellow, false, 0.0f, 0, 2.0f);
+		}	
+
 	}
 
 }

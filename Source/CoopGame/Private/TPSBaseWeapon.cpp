@@ -29,8 +29,13 @@ ATPSBaseWeapon::ATPSBaseWeapon()
 	TracerTargetName = "BeamEnd";
 
 	BaseDamage = 20.0f;
-
+	BulletSpread = 2.0f;
 	RateOfFire = 600;
+
+	TotalAmmo = 360;
+	CurrentAmmo = TotalAmmo;
+	MagazineSize = 60;
+	CurrentAmmoInMagazine = MagazineSize;
 
 	SetReplicates(true);
 	NetUpdateFrequency = 66.0f;
@@ -62,6 +67,8 @@ void ATPSBaseWeapon::Fire()
 		FRotator EyeRotation;
 		Owner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
 		FVector ShotDirection = EyeRotation.Vector();
+		float HalfRad = FMath::DegreesToRadians(BulletSpread);
+		ShotDirection = FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
 		FVector TraceEnd = EyeLocation + (ShotDirection * 10000);
 
 		EPhysicalSurface SurfaceType = SurfaceType_Default;
@@ -90,7 +97,7 @@ void ATPSBaseWeapon::Fire()
 				ActualDamage *= 4.0f;
 			}
 
-			UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, Owner->GetInstigatorController(), this, DamageType);			
+			UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, Owner->GetInstigatorController(), Owner, DamageType);			
 
 			PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
 			TracerEndPoint = Hit.ImpactPoint;
@@ -114,6 +121,10 @@ void ATPSBaseWeapon::Fire()
 
 
 }
+
+//void ATPSBaseWeapon::ServerCheckAmmo()
+//{
+//}
 
 
 void ATPSBaseWeapon::OnRep_HitScanTrace()

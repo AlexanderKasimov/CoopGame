@@ -30,6 +30,7 @@ ATPSBaseProjectile::ATPSBaseProjectile()
 
 	InitialLifeSpan = 3.0f;
 
+	BaseDamage = 150.0f;
 	ExplosionRadius = 100.0f;
 
 }
@@ -45,10 +46,11 @@ void ATPSBaseProjectile::BeginPlay()
 
 void ATPSBaseProjectile::Explode()
 {
-	TArray<AActor*> IgnoredActors;
+	TArray<AActor*> IgnoredActors;	
+	AActor* DamageCauser = Cast<AActor>(Instigator);
 	//IgnoredActors.Add(this);
 	//UGameplayStatics::GetPlayerController(this, 0)
-	UGameplayStatics::ApplyRadialDamage(GetWorld(),  20.0f, GetActorLocation(), ExplosionRadius, DamageType, IgnoredActors, this,nullptr , false, ECollisionChannel::ECC_Visibility);
+	UGameplayStatics::ApplyRadialDamage(GetWorld(), BaseDamage, GetActorLocation(), ExplosionRadius, DamageType, IgnoredActors, DamageCauser ,nullptr , false, ECollisionChannel::ECC_Visibility);
 	if (ExplosionEffect)
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());

@@ -74,6 +74,10 @@ protected:
 
 	FTimerHandle TimerHandle_SelfDamage;
 
+	FTimerHandle TimerHandle_RefreshPath;
+
+	void RefreshPath();
+
 	void DamageSelf();
 
 	bool bStartedSelfDestruct;

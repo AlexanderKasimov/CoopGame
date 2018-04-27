@@ -34,6 +34,9 @@ protected:
 	TSubclassOf<UDamageType> DamageType;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	float BaseDamage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	float ExplosionRadius;
 
 

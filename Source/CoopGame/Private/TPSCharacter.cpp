@@ -43,20 +43,7 @@ void ATPSCharacter::BeginPlay()
 	
 	DefaultFOV = CameraComponent->FieldOfView;
 	HealthComponent->OnHealthChanged.AddDynamic(this, &ATPSCharacter::OnHealthChanged);
-
-	if (Role == ROLE_Authority)
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		CurrentWeapon = GetWorld()->SpawnActor<ATPSBaseWeapon>(StarterWeaponClass, SpawnParams);
-
-		if (CurrentWeapon)
-		{
-			CurrentWeapon->SetOwner(this);
-			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachementSocketName);
-		}
-	}
+	
 
 }
 
@@ -67,7 +54,7 @@ void ATPSCharacter::OnHealthChanged(UTPSHealthComponent * HealthComp, float Heal
 		bDead = true;
 		GetMovementComponent()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
+		CurrentWeapon->StopFire();
 		DetachFromControllerPendingDestroy();
 		SetLifeSpan(10.0f);
 		if (Role == ROLE_Authority)
@@ -131,6 +118,23 @@ void ATPSCharacter::StopFire()
 }
 
 
+
+void ATPSCharacter::SpawnWeapon(TSubclassOf<ATPSBaseWeapon> WeaponClass)
+{
+	if (Role == ROLE_Authority)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		CurrentWeapon = GetWorld()->SpawnActor<ATPSBaseWeapon>(WeaponClass, SpawnParams);
+
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->SetOwner(this);
+			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachementSocketName);
+		}
+	}
+}
 
 // Called every frame
 void ATPSCharacter::Tick(float DeltaTime)

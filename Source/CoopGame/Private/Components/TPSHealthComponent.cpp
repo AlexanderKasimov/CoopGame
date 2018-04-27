@@ -19,6 +19,7 @@ UTPSHealthComponent::UTPSHealthComponent()
 
 	DefaultHealth = 100;
 	bIsDead = false;
+	TeamNum = 255;
 
 	SetIsReplicated(true);
 }
@@ -54,6 +55,11 @@ void UTPSHealthComponent::OnRep_Health(float OldHealth)
 void UTPSHealthComponent::HandleTakeAnyDamage(AActor * DamagedActor, float Damage, const UDamageType * DamageType, AController * InstigatedBy, AActor * DamageCauser)
 {
 	if (Damage <= 0.0f || bIsDead)
+	{
+		return;
+	}
+
+	if (DamagedActor != DamageCauser && IsFriendly(DamagedActor, DamageCauser))
 	{
 		return;
 	}
@@ -100,9 +106,28 @@ void UTPSHealthComponent::Heal(float HealAmount)
 	OnHealthChanged.Broadcast(this, Health, -HealAmount, nullptr, nullptr, nullptr);
 }
 
+
 float UTPSHealthComponent::GetHealth() const
 {
 	return Health;
+}
+
+
+bool UTPSHealthComponent::IsFriendly(AActor * ActorA, AActor * ActorB)
+{
+	if (ActorA == nullptr || ActorB == nullptr)
+	{
+		return true;
+	}
+	UTPSHealthComponent* HealthCompA = Cast<UTPSHealthComponent>(ActorA->GetComponentByClass(UTPSHealthComponent::StaticClass()));
+	UTPSHealthComponent* HealthCompB = Cast<UTPSHealthComponent>(ActorB->GetComponentByClass(UTPSHealthComponent::StaticClass()));
+	if (HealthCompA == nullptr || HealthCompB == nullptr)
+	{
+		return true;
+	}
+
+	return HealthCompA->TeamNum == HealthCompB->TeamNum;
+
 }
 
 
