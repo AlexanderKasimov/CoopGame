@@ -32,6 +32,8 @@ ATPSCharacter::ATPSCharacter()
 	ZoomedFOV = 65.0f;
 	ZoomInterpSpeed = 20;
 
+	bReloading = false;
+
 	WeaponAttachementSocketName = "WeaponSocket";
 
 }
@@ -100,6 +102,15 @@ void ATPSCharacter::EndZoom()
 	bWantsToZoom = false;
 }
 
+void ATPSCharacter::OnReload()
+{
+	if (CurrentWeapon && !bReloading)
+	{
+		CurrentWeapon->StopFire();
+		CurrentWeapon->StartReload();
+	}
+}
+
 
 void ATPSCharacter::StartFire()
 {
@@ -117,6 +128,26 @@ void ATPSCharacter::StopFire()
 	}
 }
 
+void ATPSCharacter::SetReloading(bool bNewReloading)
+{
+	bReloading = bNewReloading;
+}
+
+bool ATPSCharacter::GetReloading() const
+{
+	return bReloading;
+}
+
+
+ATPSBaseWeapon * ATPSCharacter::GetCurrentWeapon() const
+{
+	if (CurrentWeapon)
+	{
+		return CurrentWeapon;
+	}
+
+	return nullptr;
+}
 
 
 void ATPSCharacter::SpawnWeapon(TSubclassOf<ATPSBaseWeapon> WeaponClass)
@@ -131,6 +162,7 @@ void ATPSCharacter::SpawnWeapon(TSubclassOf<ATPSBaseWeapon> WeaponClass)
 		if (CurrentWeapon)
 		{
 			CurrentWeapon->SetOwner(this);
+			CurrentWeapon->SetOwningPlayer(this);
 			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachementSocketName);
 		}
 	}
@@ -168,6 +200,9 @@ void ATPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ATPSCharacter::StartFire);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ATPSCharacter::StopFire);
+
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ATPSCharacter::OnReload);
+
 }
 
 

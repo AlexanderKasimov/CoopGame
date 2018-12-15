@@ -48,6 +48,10 @@ ATPSTrackerBot::ATPSTrackerBot()
 	ExplosionRadius = 350;
 	SelfDamageInterval = 0.25f;
 
+	PowerLevel = 0;
+	MaxPowerLevel = 4;
+	PowerLevelRadius = 300;
+
 	SphereComponent->SetSphereRadius(ExplosionRadius);
 }
 
@@ -154,7 +158,13 @@ void ATPSTrackerBot::SelfDestruct()
 		TArray<AActor*> IgnoredActors;
 		IgnoredActors.Add(this);
 
-		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+		float FinalDamage = ExplosionDamage;
+		if (PowerLevel > 1)
+		{
+			 FinalDamage *= PowerLevel;
+		}
+
+		UGameplayStatics::ApplyRadialDamage(this, FinalDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
 
 		if (DebugTrackerBotDrawing)
 		{
@@ -210,6 +220,8 @@ void ATPSTrackerBot::Tick(float DeltaTime)
 
 	if (Role == ROLE_Authority && !bExploded)
 	{
+		//Moving
+
 		float Distance = (GetActorLocation() - NextPathPoint).Size();
 
 		if (Distance <= RequiredDistanceToTarget)
@@ -237,6 +249,49 @@ void ATPSTrackerBot::Tick(float DeltaTime)
 			DrawDebugSphere(GetWorld(), NextPathPoint, 20, 12, FColor::Yellow, false, 0.0f, 0, 2.0f);
 		}	
 
+		//Increase PowerLevel
+
+		uint8 TempPowerLevel = 0;
+
+		for (FConstPawnIterator It = GetWorld()->GetPawnIterator(); It; ++It)
+		{
+			ATPSTrackerBot* TestPawn = Cast<ATPSTrackerBot>(It->Get());
+
+			if (TestPawn == nullptr || TestPawn == this)
+			{
+				//UE_LOG(LogTemp, Log, TEXT("Cast fail"));
+				continue;				
+			}
+
+			float DistanceToTestPawn = (TestPawn->GetActorLocation() - GetActorLocation()).Size();
+
+			if (DistanceToTestPawn > PowerLevelRadius)
+			{
+				//UE_LOG(LogTemp, Log, TEXT("Distance fail"));
+				continue;
+			}		
+
+			UTPSHealthComponent* HealthComponent = Cast<UTPSHealthComponent>(TestPawn->GetComponentByClass(UTPSHealthComponent::StaticClass()));
+
+			if (HealthComponent && HealthComponent->GetHealth() > 0.0f)
+			{
+				TempPowerLevel++;
+			}
+		}
+		PowerLevel = FMath::Clamp(TempPowerLevel,(uint8)0, MaxPowerLevel);
+		//UE_LOG(LogTemp, Log, TEXT("PowerLevel = %d "), PowerLevel);
+
+		if (MaterialInstance == nullptr)
+		{
+			MaterialInstance = MeshComponent->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComponent->GetMaterial(0));
+		}
+
+		float MaterialAlpha = PowerLevel / (float)MaxPowerLevel;
+
+		if (MaterialInstance)
+		{			
+			MaterialInstance->SetScalarParameterValue("PowerLevelAlpha", MaterialAlpha);
+		}
 	}
 
 }

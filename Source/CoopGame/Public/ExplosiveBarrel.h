@@ -55,7 +55,11 @@ protected:
 
 	void Explode();
 
+	UPROPERTY(ReplicatedUsing = OnRep_bExploded, BlueprintReadOnly, Category = "Explosion")
 	bool bExploded;
+
+	UFUNCTION()
+	void OnRep_bExploded();
 
 	void RemoveRadialForceComponent();
 

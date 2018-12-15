@@ -37,11 +37,17 @@ public:
 
 	void StopFire();
 
+	void StartReload();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	void PlayFireEffects(FVector TracerEndPoint);
+
+	void Reload();
+
+	class ATPSCharacter* OwningPlayer;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent* MeshComponent;
@@ -67,7 +73,7 @@ protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	FName TracerTargetName;
 	/*BaseDamage Only for Trace Weapon */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	float BaseDamage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
@@ -97,9 +103,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	float CurrentAmmoInMagazine;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	float ReloadTime;
+
 
 	FTimerHandle TimerHandle_TimeBetweenShots;
+	FTimerHandle TimerHandle_Reload;
 
+	bool CanReload() const;
 
 	virtual void Fire();
 
@@ -122,4 +133,6 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
+	void SetOwningPlayer(ATPSCharacter* NewOwningPlayer);
+
 };

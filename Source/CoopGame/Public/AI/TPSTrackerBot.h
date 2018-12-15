@@ -82,6 +82,12 @@ protected:
 
 	bool bStartedSelfDestruct;
 
+	uint8 PowerLevel;
+
+	uint8 MaxPowerLevel;
+
+	float PowerLevelRadius;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

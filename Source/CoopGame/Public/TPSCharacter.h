@@ -37,6 +37,8 @@ protected:
 
 	void EndZoom();
 
+	void OnReload();	
+
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<ATPSBaseWeapon> StarterWeaponClass;
 	
@@ -62,6 +64,8 @@ protected:
 	void OnHealthChanged(UTPSHealthComponent* HealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 
 	bool bWantsToZoom;
+
+	bool bReloading;
 
 	//Set at begin play
 	float DefaultFOV;
@@ -94,5 +98,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player")
 		void StopFire();
 
-	
+	void SetReloading(bool bNewReloading);
+
+	bool GetReloading() const;
+
+	UFUNCTION(BlueprintCallable)
+	ATPSBaseWeapon* GetCurrentWeapon() const;
+
 };

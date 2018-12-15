@@ -7,7 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "PhysicsEngine/RadialForceComponent.h"
 #include "TimerManager.h"
-
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 AExplosiveBarrel::AExplosiveBarrel()
@@ -31,12 +31,16 @@ AExplosiveBarrel::AExplosiveBarrel()
 	RadialImpulseStrength = 1000000.0f;
 	RadialImpulseRadius = 500.0f;
 
+	SetReplicates(true);
+	SetReplicateMovement(true);
+	
 }
 
 // Called when the game starts or when spawned
 void AExplosiveBarrel::BeginPlay()
 {
 	Super::BeginPlay();
+
 
 	HealthComponent->OnHealthChanged.AddDynamic(this, &AExplosiveBarrel::OnHealthChanged);
 	RadialForceComponent->SetActive(false, true);
@@ -53,6 +57,7 @@ void AExplosiveBarrel::OnHealthChanged(UTPSHealthComponent * HealthComp, float H
 	if (Health <= 0 && !bExploded)
 	{
 		bExploded = true;
+		OnRep_bExploded();
 		Explode();
 	}
 
@@ -61,8 +66,7 @@ void AExplosiveBarrel::OnHealthChanged(UTPSHealthComponent * HealthComp, float H
 
 void AExplosiveBarrel::Explode()
 {
-	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionFX, GetActorLocation());
-	MeshComponent->SetMaterial(0, ExplodedMat);
+	UE_LOG(LogTemp, Log, TEXT("Explode"));
 	FVector Impulse = GetActorUpVector() * UpImpulseForce;
 	MeshComponent->AddImpulse(Impulse, NAME_None, false);
 	RadialForceComponent->SetActive(true, true);
@@ -74,8 +78,14 @@ void AExplosiveBarrel::Explode()
 	//RadialForceComponent->ForceStrength = RadialImpulseStrength;
 	//RadialForceComponent->AddObjectTypeToAffect(EObjectTypeQuery::ObjectTypeQuery4);
 	//RadialForceComponent->Falloff = FalloffType;
-
 	GetWorldTimerManager().SetTimer(TimerHandle_RemoveRadialForceComponent, this, &AExplosiveBarrel::RemoveRadialForceComponent, 3.0f, false);
+
+}
+
+void AExplosiveBarrel::OnRep_bExploded()
+{
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionFX, GetActorLocation());
+	MeshComponent->SetMaterial(0, ExplodedMat);
 
 }
 
@@ -95,3 +105,10 @@ void AExplosiveBarrel::Tick(float DeltaTime)
 
 }
 
+
+void AExplosiveBarrel::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AExplosiveBarrel, bExploded);
+}

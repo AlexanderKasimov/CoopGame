@@ -10,6 +10,7 @@
 #include "CoopGame.h"
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
+#include "TPSCharacter.h"
 
 static int32 DebugWeaponDrawing = 0;
 
@@ -36,6 +37,7 @@ ATPSBaseWeapon::ATPSBaseWeapon()
 	CurrentAmmo = TotalAmmo;
 	MagazineSize = 60;
 	CurrentAmmoInMagazine = MagazineSize;
+	ReloadTime = 2.3f;
 
 	SetReplicates(true);
 	NetUpdateFrequency = 66.0f;
@@ -51,14 +53,33 @@ void ATPSBaseWeapon::BeginPlay()
 	TimeBetweenShots = 60 / RateOfFire;
 
 	LastFireTime = -TimeBetweenShots;
+
+	
+}
+
+bool ATPSBaseWeapon::CanReload() const
+{
+	bool bMagazineNotFull = CurrentAmmoInMagazine < MagazineSize;
+	bool bHasAmmo = CurrentAmmo > 0;
+	return (bMagazineNotFull && bHasAmmo && !OwningPlayer->GetReloading());
+
 }
 
 void ATPSBaseWeapon::Fire()
-{
+{	
+	if (CurrentAmmoInMagazine == 0)
+	{
+		StopFire();
+		StartReload();
+		return;
+	}
+
 	if (Role < ROLE_Authority)
 	{
 		ServerFire();
-	}
+	}	
+
+	CurrentAmmoInMagazine--;
 
 	AActor* Owner = GetOwner();
 	if (Owner)
@@ -118,8 +139,12 @@ void ATPSBaseWeapon::Fire()
 		LastFireTime = GetWorld()->TimeSeconds;
 
 	}
-
-
+	if (CurrentAmmoInMagazine == 0)
+	{
+		StopFire();
+		StartReload();
+		return;
+	}
 }
 
 //void ATPSBaseWeapon::ServerCheckAmmo()
@@ -149,9 +174,16 @@ bool ATPSBaseWeapon::ServerFire_Validate()
 
 void ATPSBaseWeapon::StartFire()
 {
-	float FirstDelay = FMath::Max(LastFireTime + TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
+	if (CurrentAmmoInMagazine > 0 && !OwningPlayer->GetReloading())
+	{
+		float FirstDelay = FMath::Max(LastFireTime + TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
 
-	GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ATPSBaseWeapon::Fire, TimeBetweenShots, true, FirstDelay);
+		GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ATPSBaseWeapon::Fire, TimeBetweenShots, true, FirstDelay);
+	}
+	else if (CanReload())
+	{
+		StartReload();
+	}
 
 }
 
@@ -160,6 +192,17 @@ void ATPSBaseWeapon::StopFire()
 {
 	GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
 }
+
+
+void ATPSBaseWeapon::StartReload()
+{
+	if (CanReload())
+	{
+		GetWorldTimerManager().SetTimer(TimerHandle_Reload, this, &ATPSBaseWeapon::Reload, ReloadTime, false, ReloadTime);
+		OwningPlayer->SetReloading(true);
+	}
+}
+
 
 void ATPSBaseWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint)
 {
@@ -218,10 +261,25 @@ void ATPSBaseWeapon::PlayFireEffects(FVector TracerEndPoint)
 
 }
 
+void ATPSBaseWeapon::Reload()
+{
+	float ReloadingAmount = FMath::Min(CurrentAmmo, MagazineSize - CurrentAmmoInMagazine);
+	CurrentAmmo -= ReloadingAmount;
+	CurrentAmmoInMagazine += ReloadingAmount;
+	OwningPlayer->SetReloading(false);
+}
+
 // Called every frame
 void ATPSBaseWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+}
+
+
+void ATPSBaseWeapon::SetOwningPlayer(ATPSCharacter * NewOwningPlayer)
+{
+	OwningPlayer = NewOwningPlayer;
 
 }
 
